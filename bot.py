@@ -303,7 +303,9 @@ def main() -> None:
             print(show_phone(args, book))
         
         elif command == "all":
+            print("\n--- All Contacts ---")
             print(show_all(args, book))
+            print()
         
         elif command == "add-birthday":
             print(add_birthday(args, book))
