@@ -15,13 +15,15 @@ New in this homework:
 """
 
 from collections import UserDict
-from datetime import date
+from datetime import date, datetime, timedelta
+
+DATE_FORMAT = "%d.%m.%Y"
 
 
 class Field:
     """Base class for record fields."""
 
-    def __init__(self, value: str) -> None:
+    def __init__(self, value: str | date) -> None:
         self.value = value
 
     def __str__(self) -> str:
@@ -58,10 +60,24 @@ class Birthday(Field):
 
     def __init__(self, value: str) -> None:
         try:
-            # TODO: check the data and convert the string to a date object
-            pass
+            # strptime also rejects dates that do not exist, like 30.02
+            birthday = datetime.strptime(value, DATE_FORMAT).date()
         except ValueError:
             raise ValueError("Invalid date format. Use DD.MM.YYYY")
+        if birthday > date.today():
+            raise ValueError("Birthday cannot be in the future.")
+        super().__init__(birthday)
+
+    def __str__(self) -> str:
+        return self.value.strftime(DATE_FORMAT)
+
+
+def birthday_in_year(birthday: date, year: int) -> date:
+    """Return birthday moved to year; Feb 29 -> Feb 28 in non-leap years."""
+    try:
+        return birthday.replace(year=year)
+    except ValueError:
+        return birthday.replace(year=year, day=28)
 
 
 class Record:
@@ -111,14 +127,16 @@ class Record:
 
     def add_birthday(self, birthday: str) -> None:
         """Add or replace the birthday. Raise ValueError if it is invalid."""
-        pass  # TODO: your solution
+        self.birthday = Birthday(birthday)
 
     def __str__(self) -> str:
-        # TODO: show the birthday too, if it is set
-        return (
+        text = (
             f"Contact name: {self.name.value}, "
             f"phones: {'; '.join(p.value for p in self.phones)}"
         )
+        if self.birthday:
+            text += f", birthday: {self.birthday}"
+        return text
 
 
 class AddressBook(UserDict):
@@ -149,7 +167,33 @@ class AddressBook(UserDict):
         Saturday / Sunday birthdays move to Monday.
         today is used in tests; by default it is date.today().
         """
-        pass  # TODO: your solution
+        today = today or date.today()
+        upcoming = []
+
+        for record in self.data.values():
+            if record.birthday is None:
+                continue
+
+            birthday = birthday_in_year(record.birthday.value, today.year)
+            if birthday < today:
+                birthday = birthday_in_year(
+                    record.birthday.value, today.year + 1
+                )
+
+            if (birthday - today).days > 7:
+                continue
+
+            if birthday.weekday() == 5:  # Saturday
+                birthday += timedelta(days=2)
+            elif birthday.weekday() == 6:  # Sunday
+                birthday += timedelta(days=1)
+
+            upcoming.append({
+                "name": record.name.value,
+                "congratulation_date": birthday.strftime(DATE_FORMAT),
+            })
+
+        return upcoming
 
     def __str__(self) -> str:
         if not self.data:

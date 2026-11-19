@@ -32,7 +32,7 @@ def make_book(birthdays: dict[str, str]) -> AddressBook:
 def test_birthday() -> None:
     """Only real dates in format DD.MM.YYYY are accepted."""
     for bad in ("1990-01-01", "32.01.1990", "29.02.2023", "01.13.1990",
-                "abc", ""):
+                "abc", "", "01.01.2999"):
         expect_error(ValueError, Birthday, bad)
     Birthday("29.02.2024")
 
@@ -94,7 +94,9 @@ def test_bot_errors() -> None:
     ):
         assert isinstance(result, str) and result, result
 
-    assert add_contact(["John", "1234567890"], book) == "Contact updated."
+    assert book.find("John") is None  # invalid phone -> no empty contact
+    assert add_contact(["John", "1234567890"], book) == "Contact added."
+    assert add_contact(["John", "5555555555"], book) == "Contact updated."
     assert isinstance(add_birthday(["John", "1990-01-01"], book), str)
     add_birthday(["John", "01.01.1990"], book)
     assert "01.01.1990" in show_birthday(["John"], book)
